@@ -1,3 +1,4 @@
+import path from 'path';
 import * as plist from 'plist';
 import * as m3u from 'm3u';
 import {decode} from 'urlencode';
@@ -21,6 +22,7 @@ class App {
     this.settings = {};
     this.package = {};
     this.tracks = {};
+    this.rootPath = '';
     this.playlistPath = '';
   }
 
@@ -60,7 +62,13 @@ class App {
     let that = this,
         playLists = [],
         trackIds = [],
-        tracks = {};
+        tracks = {},
+        playListRPath = path.relative(that.playlistPath, that.rootPath + 'iTunes Media') + '/';
+
+    playListRPath = playListRPath.replace('\\', '/');
+
+    console.log(that.playlistPath);
+    console.log(playListRPath);
 
     if (library['Playlists'] && isArray(library['Playlists']) && library['Playlists'].length > 0) {
       for (let playList of library['Playlists']) {
@@ -110,7 +118,9 @@ class App {
             Math.ceil(trackItem['Total Time'] / 1000)
           ];
 
-      let trackNewName = '../iTunes Media/' + trackSrc.replace(decode(library['Music Folder']), '');
+
+
+      let trackNewName = playListRPath + trackSrc.replace(decode(library['Music Folder']), '');
       
       tracks[trackPID] = {
         pid: trackPID,
@@ -188,8 +198,14 @@ class App {
         ])
         .then((result) => {
           [that.settings, that.package] = result;
-
+          that.rootPath = path.parse(that.settings.itunesXMLPath).dir;
+          that.playlistPath = `${that.rootPath}_${that.package.name}/`;
           that.traceNotice(`載入設定檔案完成`, 'run');
+
+          return mkDir(that.playlistPath);
+        })
+        .then((result) => {
+          that.traceNotice(`建立播放清單資料夾 "${that.playlistPath}" 完成`, 'run');
 
           return that.loadItunesLibrary(that.settings.itunesXMLPath);
         })
