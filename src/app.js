@@ -195,7 +195,7 @@ class App {
         ])
         .then((result) => {
           [that.settings, that.package] = result;
-          that.rootPath = path.parse(that.settings.itunesXMLPath).dir;
+          that.rootPath = `${path.parse(that.settings.itunesXMLPath).dir}/`;
           that.playlistPath = `${that.rootPath}_${that.package.name}/`;
           that.traceNotice(`載入設定檔案完成`, 'run');
 
