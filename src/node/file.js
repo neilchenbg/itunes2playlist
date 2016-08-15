@@ -139,6 +139,10 @@ const writeFileAsJSON = (path, json) => {
   return fsWriteFile(path, JSON.stringify(json), 'utf-8');
 };
 
+const writeFileWithBOM = (path, content) => {
+  return writeFile(path, "\ufeff" + content);
+};
+
 const mkDir = (path) => {
   return new Promise((resolve, reject) => {
     checkDir(path)
@@ -210,6 +214,7 @@ export {
   copyFile,
   readFileAsJSON,
   writeFileAsJSON,
+  writeFileWithBOM,
   mkDir,
   mkDirRev,
   readDir

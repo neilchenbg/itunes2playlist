@@ -11,6 +11,7 @@ import {
   copyFile,
   readFileAsJSON,
   writeFileAsJSON,
+  writeFileWithBOM,
   mkDir,
   readDir,
   checkDir,
@@ -67,9 +68,6 @@ class App {
 
     playListRPath = playListRPath.replace('\\', '/');
 
-    console.log(that.playlistPath);
-    console.log(playListRPath);
-
     if (library['Playlists'] && isArray(library['Playlists']) && library['Playlists'].length > 0) {
       for (let playList of library['Playlists']) {
         if (
@@ -118,8 +116,6 @@ class App {
             Math.ceil(trackItem['Total Time'] / 1000)
           ];
 
-
-
       let trackNewName = playListRPath + trackSrc.replace(decode(library['Music Folder']), '');
       
       tracks[trackPID] = {
@@ -155,7 +151,8 @@ class App {
           let promiseArray = [];
 
           for (let playList of playlists) {
-            let m3uWriter = m3u.extendedWriter();
+            let m3uWriter = m3u.extendedWriter(),
+                writeFunc = that.settings.playlistBOM && that.settings.playlistBOM == true ? writeFileWithBOM : writeFile;
 
             m3uWriter.comment(`Play list create by ${that.package.name}, author: ${that.package.author}`);
             m3uWriter.write();
@@ -163,7 +160,7 @@ class App {
             for (let trackPID of playList.tracks) {
               if (tracks[trackPID]) {
                 let [m3uPath, m3uTime, m3uTitle] = [
-                  `../${tracks[trackPID]['path']}`,
+                  tracks[trackPID]['path'],
                   tracks[trackPID]['time'],
                   tracks[trackPID]['title']
                 ];
@@ -171,7 +168,7 @@ class App {
               }
             }
 
-            promiseArray[promiseArray.length] = writeFile(`${that.playlistPath}${playList.name}.m3u`, m3uWriter.toString());
+            promiseArray[promiseArray.length] = writeFunc(`${that.playlistPath}${playList.name}.m3u`, m3uWriter.toString());
           }
 
           return Promise.all(promiseArray);

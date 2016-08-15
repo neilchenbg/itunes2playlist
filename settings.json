@@ -1,4 +1,5 @@
 {
-  "itunesXMLPath": "/Volumes/DPX1_SD_I/iTunes Library.xml",
-  "playlistPrefix": "Sync"
+  "itunesXMLPath": "Z:/ServerFiles/Music/iTunes/iTunes Library.xml",
+  "playlistPrefix": "Sync",
+  "playlistBOM": true
 }
