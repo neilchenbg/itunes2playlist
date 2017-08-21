@@ -117,7 +117,8 @@ class App {
             Math.ceil(trackItem['Total Time'] / 1000)
           ];
 
-      let trackNewName = playListRPath + trackSrc.replace(decode(library['Music Folder']), '');
+      let trackUri = trackSrc.replace(decode(library['Music Folder']), '');
+      let trackNewName = playListRPath + trackUri;
       
       tracks[trackPID] = {
         pid: trackPID,
@@ -127,6 +128,7 @@ class App {
         album: trackAlbum,
         path: trackNewName,
         src: trackSrc,
+        uri: trackUri,
         time: trackTotalTime,
         modified: trackModified
       };
@@ -211,20 +213,25 @@ class App {
 
             for (let trackPID of playList.tracks) {
               if (tracks[trackPID]) {
-                let [trackPath, trackTitle, trackArtist, trackAlbum] = [
+                let [trackPath, trackTitle, trackArtist, trackAlbum, trackUri] = [
                   tracks[trackPID]['path'],
                   tracks[trackPID]['name'],
                   tracks[trackPID]['artist'],
-                  tracks[trackPID]['album']
+                  tracks[trackPID]['album'],
+                  `${that.settings.volumioRootPath}${tracks[trackPID]['uri']}`
                 ];
+
+                let tmpUri = trackUri.split('/');
+                tmpUri.pop();
+                tmpUri = tmpUri.join('/');
 
                 tmp[tmp.length] = {
                   service: 'mpd',
-                  uri: trackPath.replace('../', ''),
+                  uri: trackUri,
                   title: trackTitle,
                   artist: trackArtist,
                   album: trackAlbum,
-                  albumart: encodeURI(`/albumart?path=/mnt/iTunes Media/Music/${trackArtist}/${trackAlbum}`)
+                  albumart: encodeURI(`/albumart?path=${tmpUri}&cacheid=0`)
                 };
               }
             }
