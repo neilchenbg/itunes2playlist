@@ -11,7 +11,8 @@
   "author": "Cloud Chen(cloudchen2015@gmail.com)",
   "license": "ISC",
   "devDependencies": {
-    "babel-preset-es2015": "^6.9.0"
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.6.1"
   },
   "dependencies": {
     "m3u": "0.0.2",
