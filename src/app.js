@@ -25,6 +25,7 @@ class App {
     this.tracks = {};
     this.rootPath = '';
     this.playlistPath = '';
+    this.volumioPlaylistPath = '';
   }
 
   traceError(message, funcName) {
@@ -116,13 +117,18 @@ class App {
             Math.ceil(trackItem['Total Time'] / 1000)
           ];
 
-      let trackNewName = playListRPath + trackSrc.replace(decode(library['Music Folder']), '');
+      let trackUri = trackSrc.replace(decode(library['Music Folder']), '');
+      let trackNewName = playListRPath + trackUri;
       
       tracks[trackPID] = {
         pid: trackPID,
         title: `${trackName} - ${trackArtist}`,
+        name: trackName,
+        artist: trackArtist,
+        album: trackAlbum,
         path: trackNewName,
         src: trackSrc,
+        uri: trackUri,
         time: trackTotalTime,
         modified: trackModified
       };
@@ -184,6 +190,68 @@ class App {
     });
   }
 
+  updateVolumioPlaylist(playlists, tracks) {
+    let that = this;
+    let writeFunc = that.settings.playlistBOM && that.settings.playlistBOM == true ? writeFileWithBOM : writeFile;
+
+    return new Promise((resolve, reject) => {
+      readDir(that.volumioPlaylistPath)
+        .then((result) => {
+          let promiseArray = [];
+
+          for (let entryName of result) {
+            promiseArray[promiseArray.length] = deleteFile(`${that.volumioPlaylistPath}${entryName}`);
+          }
+
+          return Promise.all(promiseArray);
+        })
+        .then((result) => {
+          let promiseArray = [];
+
+          for (let playList of playlists) {
+            var tmp = [];
+
+            for (let trackPID of playList.tracks) {
+              if (tracks[trackPID]) {
+                let [trackPath, trackTitle, trackArtist, trackAlbum, trackUri] = [
+                  tracks[trackPID]['path'],
+                  tracks[trackPID]['name'],
+                  tracks[trackPID]['artist'],
+                  tracks[trackPID]['album'],
+                  `${that.settings.volumioRootPath}${tracks[trackPID]['uri']}`
+                ];
+
+                let tmpUri = trackUri.split('/');
+                tmpUri.pop();
+                tmpUri = tmpUri.join('/');
+
+                tmp[tmp.length] = {
+                  service: 'mpd',
+                  uri: trackUri,
+                  title: trackTitle,
+                  artist: trackArtist,
+                  album: trackAlbum,
+                  albumart: encodeURI(`/albumart?path=${tmpUri}&cacheid=0`)
+                };
+              }
+            }
+
+            promiseArray[promiseArray.length] = writeFunc(`${that.volumioPlaylistPath}${playList.name}`, JSON.stringify(tmp));
+          }
+
+          return Promise.all(promiseArray);
+        })
+        .then((result) => {
+          that.traceNotice(`處理Volumio播放清單完成`, 'updateVolumioPlaylist');
+          resolve();
+        })
+        .catch((error) => {
+          that.traceError(error, 'updatePlaylists');
+          reject(`處理Volumio播放清單錯誤`);
+        });;
+    });
+  }
+
   run() {
     let that = this;
 
@@ -197,12 +265,18 @@ class App {
           [that.settings, that.package] = result;
           that.rootPath = `${path.parse(that.settings.itunesXMLPath).dir}/`;
           that.playlistPath = `${that.rootPath}_${that.package.name}/`;
+          that.volumioPlaylistPath = `${that.rootPath}_${that.package.name}/volumio/`;
           that.traceNotice(`載入設定檔案完成`, 'run');
 
           return mkDir(that.playlistPath);
         })
         .then((result) => {
           that.traceNotice(`建立播放清單資料夾 "${that.playlistPath}" 完成`, 'run');
+
+          return mkDir(that.volumioPlaylistPath);          
+        })
+        .then((result) => {
+          that.traceNotice(`建立播放清單資料夾(Volumio) "${that.volumioPlaylistPath}" 完成`, 'run');
 
           return that.loadItunesLibrary(that.settings.itunesXMLPath);
         })
@@ -211,7 +285,10 @@ class App {
 
           let [playlists, tracks] = that.getPlaylistsAndTracksFromLibrary(result);
 
-          return that.updatePlaylists(playlists, tracks);
+          return Promise.all([
+            that.updatePlaylists(playlists, tracks),
+            that.updateVolumioPlaylist(playlists, tracks)
+          ]);
         })
         .then((result) => {
           resolve('執行完成');
